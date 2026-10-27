@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tech Flip & Market Trader</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for dynamic market charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts: Share Tech Mono & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            mono: ['"Share Tech Mono"', 'monospace'],
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neon: {
+              cyan: '#00f3ff',
+              green: '#00ff66',
+              amber: '#ffb700',
+              pink: '#ff0055',
+              purple: '#b026ff'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for retro feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f3ff;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.25);
+    }
+    .glow-green {
+      box-shadow: 0 0 15px rgba(0, 255, 102, 0.25);
+    }
+    .scanline {
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.3) 50%,
+        rgba(0, 0, 0, 0.3)
+      );
+      background-size: 100% 4px;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans select-none overflow-x-hidden bg-slate-950 text-slate-100">
+
+  <!-- Top Status Bar Header -->
+  <header class="bg-slate-900/90 border-b border-slate-800 p-3 sticky top-0 z-40 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <!-- Logo -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 font-bold text-xl shadow-lg shadow-cyan-500/20">
+          <i class="fa-solid font-mono fa-microchip"></i>
+        </div>
+        <div>
+          <h1 class="font-mono text-lg font-bold tracking-wider text-cyan-400">TECH FLIP & MARKET TRADER</h1>
+          <p class="text-xs text-slate-400">Pawn & Hardware Speculation Simulator</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-4 font-mono text-xs sm:text-sm">
+        <!-- Cash -->
+        <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 flex items-center space-x-2">
+          <i class="fa-solid fa-wallet text-emerald-400"></i>
+          <div>
+            <span class="text-slate-400 text-[10px] block leading-none">CASH</span>
+            <span id="stat-cash" class="text-emerald-400 font-bold">₹25,000</span>
+          </div>
+        </div>
+
+        <!-- Inventory Space -->
+        <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 flex items-center space-x-2">
+          <i class="fa-solid fa-boxes-stacked text-cyan-400"></i>
+          <div>
+            <span class="text-slate-400 text-[10px] block leading-none">INVENTORY</span>
+            <span id="stat-inv" class="text-cyan-400 font-bold">0 / 5</span>
+          </div>
+        </div>
+
+        <!-- Net Worth -->
+        <div class="bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 flex items-center space-x-2">
+          <i class="fa-solid fa-chart-line text-amber-400"></i>
+          <div>
+            <span class="text-slate-400 text-[10px] block leading-none">BANK DEBT</span>
+            <span id="stat-debt" class="text-amber-400 font-bold">₹10,000</span>
+          </div>
+        </div>
+
+        <!-- Day Counter & Advance Button -->
+        <div class="flex items-center space-x-2 bg-slate-900 border border-cyan-500/30 rounded-lg p-1">
+          <div class="px-2 text-center">
+            <span class="text-slate-400 text-[10px] block leading-none">DAY</span>
+            <span id="stat-day" class="text-cyan-300 font-bold text-base">1</span>
+          </div>
+          <button id="btn-next-day" onclick="advanceDay()" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold px-3 py-2 rounded text-xs transition flex items-center space-x-1.5 active:scale-95 shadow-md shadow-cyan-500/20">
+            <span>NEXT DAY</span>
+            <i class="fa-solid fa-forward-step"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Live Ticker Banner -->
+  <div class="bg-slate-900 border-b border-slate-800 py-1.5 px-4 overflow-hidden flex items-center text-xs font-mono">
+    <span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[10px] font-bold mr-3 shrink-0 flex items-center gap-1">
+      <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> LIVE NEWS
+    </span>
+    <div class="overflow-hidden whitespace-nowrap w-full">
+      <div id="news-ticker" class="inline-block animate-marquee text-slate-300">
+        Welcome to Tech Flip & Market Trader! Buy low in flea markets, repair at workbench, track hardware trends, sell high!
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Body Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col space-y-4">
+
+    <!-- Navigation Tabs -->
+    <div class="flex overflow-x-auto border-b border-slate-800 space-x-2 pb-1 font-mono text-sm scrollbar-none">
+      <button onclick="switchTab('tab-market')" id="nav-tab-market" class="tab-btn px-4 py-2.5 rounded-t-lg bg-slate-800 text-cyan-400 border-t-2 border-cyan-400 flex items-center space-x-2 font-semibold">
+        <i class="fa-solid fa-store"></i>
+        <span>Flea Market & Listings</span>
+      </button>
+      <button onclick="switchTab('tab-workbench')" id="nav-tab-workbench" class="tab-btn px-4 py-2.5 rounded-t-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 flex items-center space-x-2 font-semibold">
+        <i class="fa-solid fa-screwdriver-wrench"></i>
+        <span>Workbench & Stock (<span id="tab-stock-count">0</span>)</span>
+      </button>
+      <button onclick="switchTab('tab-analytics')" id="nav-tab-analytics" class="tab-btn px-4 py-2.5 rounded-t-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 flex items-center space-x-2 font-semibold">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Market Trends & Intel</span>
+      </button>
+      <button onclick="switchTab('tab-bank')" id="nav-tab-bank" class="tab-btn px-4 py-2.5 rounded-t-lg text-slate-400 hover:text-slate-200 hover:bg-slate-900 flex items-center space-x-2 font-semibold">
+        <i class="fa-solid fa-building-columns"></i>
+        <span>Bank & Shop Upgrades</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: FLEA MARKET & LISTINGS -->
+    <section id="tab-market" class="tab-content flex-1 flex flex-col space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <div>
+          <h2 class="text-base font-bold font-mono text-cyan-400 flex items-center gap-2">
+            <i class="fa-solid fa-cart-shopping"></i> Local Garage Sales & Auction Deals
+          </h2>
+          <p class="text-xs text-slate-400">Listings restock every day. Buy items with repairable flaws below true value!</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="rerollListings(true)" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-2 rounded-lg border border-slate-700 flex items-center space-x-1.5 transition">
+            <i class="fa-solid fa-rotate-right text-cyan-400"></i>
+            <span>Refresh Market (₹500)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Listings Grid -->
+      <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Dynamic Listings Injected Here -->
+      </div>
+    </section>
+
+    <!-- TAB 2: WORKBENCH & INVENTORY -->
+    <section id="tab-workbench" class="tab-content hidden flex-1 flex flex-col space-y-4">
+      <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold font-mono text-emerald-400 flex items-center gap-2">
+            <i class="fa-solid fa-microchip"></i> Workbench & Storage Shelf
+          </h2>
+          <p class="text-xs text-slate-400">Repair flaws to multiply item value, or list directly on the hardware exchange.</p>
+        </div>
+        <div class="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+          Workbench Level: <span id="wb-level-txt" class="text-cyan-400 font-bold">1 (Basic Tools)</span>
+        </div>
+      </div>
+
+      <div id="inventory-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Dynamic Inventory Injected Here -->
+      </div>
+    </section>
+
+    <!-- TAB 3: MARKET TRENDS & INTEL -->
+    <section id="tab-analytics" class="tab-content hidden flex-1 flex flex-col space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Chart Container -->
+        <div class="lg:col-span-2 bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-mono text-sm font-bold text-cyan-400 flex items-center gap-2">
+              <i class="fa-solid fa-chart-line"></i> Category Price Index (7-Day Trend)
+            </h3>
+            <span class="text-xs text-slate-400 font-mono">100% = Standard Baseline</span>
+          </div>
+          <div class="flex-1 min-h-[280px] relative">
+            <canvas id="marketChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Intel & Live Rates -->
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col justify-between space-y-3">
+          <div>
+            <h3 class="font-mono text-sm font-bold text-amber-400 flex items-center gap-2 mb-2">
+              <i class="fa-solid fa-bullhorn"></i> Market News Logs
+            </h3>
+            <div id="news-log" class="space-y-2 text-xs font-mono max-h-60 overflow-y-auto pr-1">
+              <!-- Logs populated dynamically -->
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800">
+            <h4 class="font-mono text-xs font-bold text-slate-400 mb-2">CURRENT CATEGORY MULTIPLIERS</h4>
+            <div id="category-multipliers-list" class="space-y-1 text-xs font-mono">
+              <!-- Multipliers populated dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: BANK & UPGRADES -->
+    <section id="tab-bank" class="tab-content hidden flex-1 flex flex-col space-y-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- Loan Shark & Bank -->
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 class="font-mono text-base font-bold text-amber-400 flex items-center gap-2">
+                <i class="fa-solid fa-piggy-bank"></i> Tech-Loan Financial Services
+              </h3>
+              <span class="text-xs bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20 font-mono">Interest: 5% / Day</span>
+            </div>
+
+            <div class="space-y-3 font-mono text-xs mb-6">
+              <div class="flex justify-between items-center bg-slate-950 p-3 rounded-lg">
+                <span class="text-slate-400">Current Loan Debt:</span>
+                <span id="bank-debt-display" class="text-red-400 font-bold text-sm">₹10,000</span>
+              </div>
+              <div class="flex justify-between items-center bg-slate-950 p-3 rounded-lg">
+                <span class="text-slate-400">Bank Savings Account:</span>
+                <span id="bank-savings-display" class="text-emerald-400 font-bold text-sm">₹0</span>
+              </div>
+              <p class="text-slate-400 text-[11px] leading-relaxed">
+                Pay off your debt before interest compounds! Alternatively, save excess cash in the bank to earn 2% daily yield.
+              </p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="payDebt(2500)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-800 text-xs font-mono py-2 rounded-lg transition">
+                Pay ₹2,500 Debt
+              </button>
+              <button onclick="payDebt(10000)" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs font-mono py-2 rounded-lg transition">
+                Pay ₹10,000 Debt
+              </button>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="depositSavings(5000)" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-mono py-2 rounded-lg border border-slate-700 transition">
+                Deposit ₹5,000
+              </button>
+              <button onclick="withdrawSavings(5000)" class="bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-mono py-2 rounded-lg border border-slate-700 transition">
+                Withdraw ₹5,000
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shop & Workbench Upgrades -->
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+              <h3 class="font-mono text-base font-bold text-cyan-400 flex items-center gap-2">
+                <i class="fa-solid fa-warehouse"></i> Store Expansion & Workbench Upgrades
+              </h3>
+              <span class="text-xs bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20 font-mono">Store Status</span>
+            </div>
+
+            <div class="space-y-4">
+              <!-- Inventory Space Upgrade Card -->
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div>
+                  <h4 class="font-mono text-xs font-bold text-slate-200">STORAGE SHELF EXPANSION</h4>
+                  <p class="text-[11px] text-slate-400">Increase max holding capacity by +3 slots.</p>
+                  <span class="text-xs font-mono text-cyan-400 mt-1 block">Cost: ₹7,500</span>
+                </div>
+                <button onclick="upgradeStorage()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono px-4 py-2 rounded-lg transition active:scale-95 shadow-lg shadow-cyan-500/20">
+                  UPGRADE
+                </button>
+              </div>
+
+              <!-- Workbench Tooling Upgrade Card -->
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div>
+                  <h4 class="font-mono text-xs font-bold text-slate-200">PRECISION TOOLKIT & SOLDERING</h4>
+                  <p class="text-[11px] text-slate-400">Reduces repair costs by 30% and boosts repair speed.</p>
+                  <span class="text-xs font-mono text-emerald-400 mt-1 block" id="wb-cost-txt">Cost: ₹12,000</span>
+                </div>
+                <button id="btn-upgrade-wb" onclick="upgradeWorkbench()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs font-mono px-4 py-2 rounded-lg transition active:scale-95 shadow-lg shadow-emerald-500/20">
+                  UPGRADE
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="mt-4 p-3 bg-slate-950 rounded-lg border border-slate-800 text-[11px] text-slate-400 font-mono">
+            💡 <strong class="text-slate-200">Pro Tip:</strong> Upgrading your inventory capacity early allows you to hold hardware during market slumps and unload during massive trend spikes!
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal / Toast Notification System -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- JavaScript Game Engine -->
+  <script>
+    // --- AUDIO SYNTHESIZER (Web Audio API) ---
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      },
+      playTone(freq, duration, type = 'sine') {
+        try {
+          this.init();
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch(e) {}
+      },
+      playBuy() {
+        this.playTone(523.25, 0.1, 'square'); // C5
+        setTimeout(() => this.playTone(659.25, 0.15, 'square'), 80); // E5
+      },
+      playSell() {
+        this.playTone(783.99, 0.1, 'triangle'); // G5
+        setTimeout(() => this.playTone(1046.50, 0.2, 'triangle'), 90); // C6
+      },
+      playRepair() {
+        this.playTone(300, 0.08, 'sawtooth');
+        setTimeout(() => this.playTone(450, 0.08, 'sawtooth'), 60);
+        setTimeout(() => this.playTone(600, 0.12, 'sawtooth'), 120);
+      },
+      playNextDay() {
+        this.playTone(440, 0.1, 'sine');
+        setTimeout(() => this.playTone(880, 0.2, 'sine'), 100);
+      }
+    };
+
+    // --- BASE GAME DATA ---
+    const CATEGORIES = {
+      RETRO_CONSOLE: { name: 'Retro Consoles', icon: 'fa-gamepad', color: '#00f3ff' },
+      LAPTOP: { name: 'Vintage Laptops', icon: 'fa-laptop', color: '#00ff66' },
+      GPU: { name: 'Graphics Cards', icon: 'fa-microchip', color: '#ffb700' },
+      MICROCONTROLLER: { name: 'Dev Boards & Chips', icon: 'fa-memory', color: '#b026ff' },
+      RETRO_AUDIO: { name: 'Vintage Audio', icon: 'fa-radio', color: '#ff0055' }
+    };
+
+    const BASE_ITEMS = [
+      { name: '8-Bit Console System', category: 'RETRO_CONSOLE', basePrice: 3500, baseFlaw: 'Dirty Pins & Corroded Port' },
+      { name: '16-Bit Handheld Player', category: 'RETRO_CONSOLE', basePrice: 4200, baseFlaw: 'Blown Capacitors & Dead Speaker' },
+      { name: 'Late-90s Pentium Laptop', category: 'LAPTOP', basePrice: 6500, baseFlaw: 'Missing RAM & Dead Battery' },
+      { name: 'Rugged Industrial Laptop', category: 'LAPTOP', basePrice: 8500, baseFlaw: 'Broken Hinge & Dusty Heatsink' },
+      { name: 'Classic Dual-Fan GPU', category: 'GPU', basePrice: 12000, baseFlaw: 'Thermal Paste Dried & Fan Noise' },
+      { name: 'Retro Workstation GPU', category: 'GPU', basePrice: 16000, baseFlaw: 'BIOS Corruption & Heavy Dust' },
+      { name: '8051 Dev Controller Kit', category: 'MICROCONTROLLER', basePrice: 1200, baseFlaw: 'Unflashed ROM & Tarnished Pins' },
+      { name: 'Vintage Cassette Deck', category: 'RETRO_AUDIO', basePrice: 2800, baseFlaw: 'Stretched Belt & Dirty Heads' },
+      { name: 'Mechanical Keyboard (Clicky)', category: 'MICROCONTROLLER', basePrice: 2200, baseFlaw: 'Spilled Soda & Sticky Switches' }
+    ];
+
+    const CONDITIONS = {
+      BROKEN: { name: 'Broken', multiplier: 0.5, color: 'text-red-400', bg: 'bg-red-500/10' },
+      DUSTY: { name: 'Dusty / Flawed', multiplier: 0.75, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+      GOOD: { name: 'Good Condition', multiplier: 1.0, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+      MINT: { name: 'Mint / Restored', multiplier: 1.45, color: 'text-emerald-400', bg: 'bg-emerald-500/10' }
+    };
+
+    // --- GAME STATE ---
+    let state = {
+      day: 1,
+      cash: 25000,
+      bankDebt: 10000,
+      bankSavings: 0,
+      maxInventory: 5,
+      workbenchLevel: 1,
+      inventory: [],
+      marketListings: [],
+      newsLogs: [],
+      categoryMultipliers: {
+        RETRO_CONSOLE: 1.0,
+        LAPTOP: 1.0,
+        GPU: 1.0,
+        MICROCONTROLLER: 1.0,
+        RETRO_AUDIO: 1.0
+      },
+      chartHistory: {
+        labels: ['Day 1'],
+        datasets: {}
+      }
+    };
+
+    let chartInstance = null;
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+      initChart();
+      generateInitialListings();
+      updateUI();
+      logNews("Welcome to Tech Flip! Buy low at the Flea Market, fix gear at your Workbench, and sell during demand surges!");
+    };
+
+    // --- TAB NAVIGATION ---
+    function switchTab(tabId) {
+      AudioEngine.playTone(400, 0.04, 'sine');
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-slate-800', 'text-cyan-400', 'border-t-2', 'border-cyan-400');
+        btn.classList.add('text-slate-400', 'hover:bg-slate-900');
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('nav-' + tabId);
+      activeBtn.classList.add('bg-slate-800', 'text-cyan-400', 'border-t-2', 'border-cyan-400');
+      activeBtn.classList.remove('text-slate-400', 'hover:bg-slate-900');
+
+      if (tabId === 'tab-analytics' && chartInstance) {
+        setTimeout(() => chartInstance.update(), 100);
+      }
+    }
+
+    // --- MARKET LISTINGS GENERATION ---
+    function generateInitialListings() {
+      state.marketListings = [];
+      const count = 5 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        state.marketListings.push(createRandomListing());
+      }
+      renderListings();
+    }
+
+    function createRandomListing() {
+      const template = BASE_ITEMS[Math.floor(Math.random() * BASE_ITEMS.length)];
+      const isFlawed = Math.random() < 0.75;
+      const conditionKey = isFlawed ? (Math.random() < 0.5 ? 'BROKEN' : 'DUSTY') : 'GOOD';
+      
+      const catMult = state.categoryMultipliers[template.category] || 1.0;
+      const conditionMult = CONDITIONS[conditionKey].multiplier;
+      
+      // Market discount variation (flea market bargain factor)
+      const bargainFactor = 0.65 + (Math.random() * 0.25);
+      const askingPrice = Math.round(template.basePrice * catMult * conditionMult * bargainFactor);
+
+      return {
+        id: 'item_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        name: template.name,
+        category: template.category,
+        basePrice: template.basePrice,
+        flaw: conditionKey === 'GOOD' ? 'None' : template.baseFlaw,
+        condition: conditionKey,
+        askingPrice: askingPrice,
+        repaired: conditionKey === 'GOOD' || conditionKey === 'MINT'
+      };
+    }
+
+    function rerollListings(costMoney = false) {
+      if (costMoney) {
+        if (state.cash < 500) {
+          showToast('Not enough cash to refresh listings!', 'error');
+          return;
+        }
+        state.cash -= 500;
+        AudioEngine.playTone(350, 0.05);
+      }
+      generateInitialListings();
+      updateUI();
+      showToast('Flea market listings refreshed!', 'info');
+    }
+
+    // --- BUYING & WORKBENCH LOGIC ---
+    function buyItem(listingId) {
+      if (state.inventory.length >= state.maxInventory) {
+        showToast('Inventory storage is full! Upgrade storage in Bank tab.', 'error');
+        return;
+      }
+
+      const idx = state.marketListings.findIndex(item => item.id === listingId);
+      if (idx === -1) return;
+
+      const item = state.marketListings[idx];
+      if (state.cash < item.askingPrice) {
+        showToast('Not enough cash to buy this item!', 'error');
+        return;
+      }
+
+      state.cash -= item.askingPrice;
+      state.inventory.push(item);
+      state.marketListings.splice(idx, 1);
+
+      AudioEngine.playBuy();
+      showToast(`Bought ${item.name} for ₹${item.askingPrice.toLocaleString()}`, 'success');
+      updateUI();
+    }
+
+    function repairItem(itemId) {
+      const item = state.inventory.find(i => i.id === itemId);
+      if (!item) return;
+
+      if (item.condition === 'MINT') {
+        showToast('Item is already in Mint condition!', 'info');
+        return;
+      }
+
+      // Calculate repair cost based on workbench level
+      const discount = state.workbenchLevel > 1 ? 0.7 : 1.0;
+      const repairCost = Math.round(item.basePrice * 0.15 * discount);
+
+      if (state.cash < repairCost) {
+        showToast(`Need ₹${repairCost.toLocaleString()} cash to perform repairs!`, 'error');
+        return;
+      }
+
+      state.cash -= repairCost;
+      
+      // Upgrade condition level
+      if (item.condition === 'BROKEN') item.condition = 'GOOD';
+      else if (item.condition === 'DUSTY') item.condition = 'GOOD';
+      else if (item.condition === 'GOOD') item.condition = 'MINT';
+
+      item.flaw = 'Fully Serviced & Cleaned';
+      item.repaired = true;
+
+      AudioEngine.playRepair();
+      showToast(`Repaired ${item.name}! Upgraded to ${CONDITIONS[item.condition].name}`, 'success');
+      updateUI();
+    }
+
+    function sellItem(itemId) {
+      const idx = state.inventory.findIndex(i => i.id === itemId);
+      if (idx === -1) return;
+
+      const item = state.inventory[idx];
+      const catMult = state.categoryMultipliers[item.category] || 1.0;
+      const condMult = CONDITIONS[item.condition].multiplier;
+
+      const finalPrice = Math.round(item.basePrice * catMult * condMult);
+
+      state.cash += finalPrice;
+      state.inventory.splice(idx, 1);
+
+      AudioEngine.playSell();
+      showToast(`Sold ${item.name} on the exchange for ₹${finalPrice.toLocaleString()}!`, 'success');
+      updateUI();
+    }
+
+    // --- DAY ADVANCEMENT & DYNAMIC MARKET ---
+    function advanceDay() {
+      state.day++;
+      AudioEngine.playNextDay();
+
+      // 1. Process Bank Debt Interest (5% daily)
+      if (state.bankDebt > 0) {
+        const interest = Math.round(state.bankDebt * 0.05);
+        state.bankDebt += interest;
+        logNews(`⚠️ Loan interest added ₹${interest.toLocaleString()} to your debt.`);
+      }
+
+      // 2. Process Bank Savings Yield (2% daily)
+      if (state.bankSavings > 0) {
+        const yieldAmt = Math.round(state.bankSavings * 0.02);
+        state.bankSavings += yieldAmt;
+        logNews(`📈 Earned ₹${yieldAmt.toLocaleString()} interest from bank savings.`);
+      }
+
+      // 3. Shift Category Price Multipliers
+      let newsEventTriggered = false;
+      Object.keys(CATEGORIES).forEach(catKey => {
+        // Random daily fluctuation (-10% to +10%)
+        let change = (Math.random() * 0.2) - 0.1;
+        state.categoryMultipliers[catKey] = Math.max(0.4, Math.min(2.5, state.categoryMultipliers[catKey] + change));
+      });
+
+      // 4. Random News Event (40% chance daily)
+      if (Math.random() < 0.45) {
+        triggerMarketNewsEvent();
+        newsEventTriggered = true;
+      }
+
+      // 5. Refresh Flea Market Listings
+      generateInitialListings();
+
+      // 6. Update Chart Data
+      updateChartData();
+
+      showToast(`Advanced to Day ${state.day}! Market refreshed.`, 'info');
+      updateUI();
+    }
+
+    function triggerMarketNewsEvent() {
+      const events = [
+        { cat: 'RETRO_CONSOLE', mult: 1.6, text: '📰 NOSTALGIA CRAZE! Retro gaming documentary explodes in popularity! Consoles +60%' },
+        { cat: 'GPU', mult: 0.6, text: '📰 TECH CRASH! Next-gen GPUs announced, older graphics cards plunge -40%' },
+        { cat: 'MICROCONTROLLER', mult: 1.8, text: '📰 SILICON SHORTAGE! Global microchip supply bottleneck! Dev boards surge +80%' },
+        { cat: 'LAPTOP', mult: 1.4, text: '📰 REMOTE WORK BOOM! High demand for vintage laptops and spare parts +40%' },
+        { cat: 'RETRO_AUDIO', mult: 1.5, text: '📰 HIPSTER AUDIOPHILE TREND! Cassette decks and analog audio gear spike +50%' }
+      ];
+
+      const ev = events[Math.floor(Math.random() * events.length)];
+      state.categoryMultipliers[ev.cat] = Math.round(ev.mult * 100) / 100;
+      logNews(ev.text);
+
+      const ticker = document.getElementById('news-ticker');
+      if (ticker) ticker.innerText = ev.text;
+    }
+
+    function logNews(text) {
+      state.newsLogs.unshift(`[Day ${state.day}] ${text}`);
+      if (state.newsLogs.length > 15) state.newsLogs.pop();
+    }
+
+    // --- BANK & UPGRADES ---
+    function payDebt(amount) {
+      if (state.bankDebt <= 0) {
+        showToast('You are completely debt free!', 'info');
+        return;
+      }
+      const payAmt = Math.min(amount, state.bankDebt);
+      if (state.cash < payAmt) {
+        showToast('Not enough cash to pay this debt amount!', 'error');
+        return;
+      }
+
+      state.cash -= payAmt;
+      state.bankDebt -= payAmt;
+      AudioEngine.playBuy();
+      showToast(`Paid ₹${payAmt.toLocaleString()} towards loan debt.`, 'success');
+      updateUI();
+    }
+
+    function depositSavings(amount) {
+      if (state.cash < amount) {
+        showToast('Not enough cash to deposit!', 'error');
+        return;
+      }
+      state.cash -= amount;
+      state.bankSavings += amount;
+      AudioEngine.playBuy();
+      showToast(`Deposited ₹${amount.toLocaleString()} into savings.`, 'success');
+      updateUI();
+    }
+
+    function withdrawSavings(amount) {
+      if (state.bankSavings < amount) {
+        showToast('Not enough savings balance!', 'error');
+        return;
+      }
+      state.bankSavings -= amount;
+      state.cash += amount;
+      AudioEngine.playSell();
+      showToast(`Withdrew ₹${amount.toLocaleString()} from savings.`, 'success');
+      updateUI();
+    }
+
+    function upgradeStorage() {
+      const cost = 7500;
+      if (state.cash < cost) {
+        showToast('Not enough cash for storage upgrade!', 'error');
+        return;
+      }
+      state.cash -= cost;
+      state.maxInventory += 3;
+      AudioEngine.playRepair();
+      showToast(`Expanded inventory capacity to ${state.maxInventory} slots!`, 'success');
+      updateUI();
+    }
+
+    function upgradeWorkbench() {
+      if (state.workbenchLevel > 1) {
+        showToast('Workbench is already fully upgraded!', 'info');
+        return;
+      }
+      const cost = 12000;
+      if (state.cash < cost) {
+        showToast('Not enough cash for workbench upgrade!', 'error');
+        return;
+      }
+      state.cash -= cost;
+      state.workbenchLevel = 2;
+      AudioEngine.playRepair();
+      showToast('Workbench upgraded to Level 2! Repair costs reduced by 30%.', 'success');
+      updateUI();
+    }
+
+    // --- RENDERERS & UI UPDATES ---
+    function updateUI() {
+      // Header Stats
+      document.getElementById('stat-cash').innerText = '₹' + state.cash.toLocaleString();
+      document.getElementById('stat-inv').innerText = `${state.inventory.length} / ${state.maxInventory}`;
+      document.getElementById('stat-debt').innerText = '₹' + state.bankDebt.toLocaleString();
+      document.getElementById('stat-day').innerText = state.day;
+
+      document.getElementById('tab-stock-count').innerText = state.inventory.length;
+
+      // Bank Tab
+      document.getElementById('bank-debt-display').innerText = '₹' + state.bankDebt.toLocaleString();
+      document.getElementById('bank-savings-display').innerText = '₹' + state.bankSavings.toLocaleString();
+      document.getElementById('wb-level-txt').innerText = state.workbenchLevel === 1 ? 'Lvl 1 (Basic Tools)' : 'Lvl 2 (Precision Toolkit)';
+
+      if (state.workbenchLevel > 1) {
+        const btn = document.getElementById('btn-upgrade-wb');
+        if (btn) {
+          btn.innerText = 'MAXED';
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+      }
+
+      renderListings();
+      renderInventory();
+      renderNewsLogs();
+      renderCategoryMultipliers();
+    }
+
+    function renderListings() {
+      const container = document.getElementById('listings-grid');
+      container.innerHTML = '';
+
+      if (state.marketListings.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-500 font-mono">
+            <i class="fa-solid fa-box-open text-4xl mb-3 block"></i>
+            No active listings right now. Click "Refresh Market" or advance to the Next Day!
+          </div>`;
+        return;
+      }
+
+      state.marketListings.forEach(item => {
+        const catInfo = CATEGORIES[item.category];
+        const condInfo = CONDITIONS[item.condition];
+        const estValue = Math.round(item.basePrice * (state.categoryMultipliers[item.category] || 1.0) * condInfo.multiplier);
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-cyan-500/40 transition glow-cyan/5';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border border-slate-700 bg-slate-950 text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid ${catInfo.icon}" style="color:${catInfo.color}"></i> ${catInfo.name}
+              </span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded ${condInfo.bg} ${condInfo.color} font-bold">
+                ${condInfo.name}
+              </span>
+            </div>
+
+            <h3 class="font-bold text-sm text-slate-100 mb-1">${item.name}</h3>
+            
+            <div class="text-xs font-mono space-y-1 mb-4 text-slate-400 bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
+              <div class="flex justify-between">
+                <span>Known Issue:</span>
+                <span class="text-red-400 font-semibold">${item.flaw}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Est. Market Value:</span>
+                <span class="text-emerald-400 font-semibold">₹${estValue.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800">
+            <div>
+              <span class="text-[10px] text-slate-400 font-mono block leading-none">ASKING PRICE</span>
+              <span class="text-base font-bold font-mono text-cyan-400">₹${item.askingPrice.toLocaleString()}</span>
+            </div>
+            <button onclick="buyItem('${item.id}')" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono px-3 py-2 rounded-lg transition active:scale-95 shadow-md shadow-cyan-500/20 flex items-center gap-1">
+              <i class="fa-solid fa-cart-plus"></i> BUY ITEM
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderInventory() {
+      const container = document.getElementById('inventory-grid');
+      container.innerHTML = '';
+
+      if (state.inventory.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full py-12 text-center text-slate-500 font-mono">
+            <i class="fa-solid fa-screwdriver-wrench text-4xl mb-3 block"></i>
+            Your workbench shelf is empty! Visit the Flea Market tab to buy items.
+          </div>`;
+        return;
+      }
+
+      state.inventory.forEach(item => {
+        const catInfo = CATEGORIES[item.category];
+        const condInfo = CONDITIONS[item.condition];
+        const catMult = state.categoryMultipliers[item.category] || 1.0;
+        const currentSellValue = Math.round(item.basePrice * catMult * condInfo.multiplier);
+
+        const discount = state.workbenchLevel > 1 ? 0.7 : 1.0;
+        const repairCost = Math.round(item.basePrice * 0.15 * discount);
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-500/40 transition';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded border border-slate-700 bg-slate-950 text-slate-300 flex items-center gap-1.5">
+                <i class="fa-solid ${catInfo.icon}" style="color:${catInfo.color}"></i> ${catInfo.name}
+              </span>
+              <span class="text-xs font-mono px-2 py-0.5 rounded ${condInfo.bg} ${condInfo.color} font-bold">
+                ${condInfo.name}
+              </span>
+            </div>
+
+            <h3 class="font-bold text-sm text-slate-100 mb-1">${item.name}</h3>
+
+            <div class="text-xs font-mono space-y-1 mb-4 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Status:</span>
+                <span class="text-slate-200">${item.flaw}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Current Resell Value:</span>
+                <span class="text-emerald-400 font-bold">₹${currentSellValue.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2 pt-2 border-t border-slate-800">
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="repairItem('${item.id}')" ${item.condition === 'MINT' ? 'disabled' : ''} class="${item.condition === 'MINT' ? 'opacity-40 cursor-not-allowed' : ''} bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 text-xs font-mono py-2 rounded-lg transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-screwdriver"></i> Fix (₹${repairCost})
+              </button>
+              <button onclick="sellItem('${item.id}')" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs font-mono py-2 rounded-lg transition active:scale-95 shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1">
+                <i class="fa-solid fa-dollar-sign"></i> SELL NOW
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderNewsLogs() {
+      const logContainer = document.getElementById('news-log');
+      logContainer.innerHTML = '';
+      state.newsLogs.forEach(log => {
+        const item = document.createElement('div');
+        item.className = 'p-2 rounded bg-slate-950 border border-slate-800 text-slate-300';
+        item.innerText = log;
+        logContainer.appendChild(item);
+      });
+    }
+
+    function renderCategoryMultipliers() {
+      const container = document.getElementById('category-multipliers-list');
+      container.innerHTML = '';
+      Object.keys(CATEGORIES).forEach(catKey => {
+        const cat = CATEGORIES[catKey];
+        const mult = state.categoryMultipliers[catKey] || 1.0;
+        const pct = Math.round(mult * 100);
+        
+        let colorClass = 'text-slate-300';
+        if (pct > 100) colorClass = 'text-emerald-400 font-bold';
+        else if (pct < 100) colorClass = 'text-red-400 font-bold';
+
+        const row = document.createElement('div');
+        row.className = 'flex justify-between items-center bg-slate-950 p-2 rounded border border-slate-800/60';
+        row.innerHTML = `
+          <span class="flex items-center gap-2">
+            <i class="fa-solid ${cat.icon}" style="color:${cat.color}"></i> ${cat.name}
+          </span>
+          <span class="${colorClass}">${pct}% Index</span>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // --- CHART MANAGEMENT ---
+    function initChart() {
+      const ctx = document.getElementById('marketChart').getContext('2d');
+
+      const datasets = Object.keys(CATEGORIES).map(catKey => ({
+        label: CATEGORIES[catKey].name,
+        data: [100],
+        borderColor: CATEGORIES[catKey].color,
+        backgroundColor: CATEGORIES[catKey].color + '22',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 3
+      }));
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Day 1'],
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#94a3b8',
+                font: { family: 'Share Tech Mono', size: 11 }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#1e293b' },
+              ticks: { color: '#94a3b8', font: { family: 'Share Tech Mono' } }
+            },
+            y: {
+              grid: { color: '#1e293b' },
+              ticks: { 
+                color: '#94a3b8', 
+                font: { family: 'Share Tech Mono' },
+                callback: value => value + '%'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function updateChartData() {
+      if (!chartInstance) return;
+
+      if (chartInstance.data.labels.length >= 7) {
+        chartInstance.data.labels.shift();
+        chartInstance.data.datasets.forEach(ds => ds.data.shift());
+      }
+
+      chartInstance.data.labels.push(`Day ${state.day}`);
+
+      chartInstance.data.datasets.forEach(dataset => {
+        const catKey = Object.keys(CATEGORIES).find(k => CATEGORIES[k].name === dataset.label);
+        if (catKey) {
+          const mult = state.categoryMultipliers[catKey] || 1.0;
+          dataset.data.push(Math.round(mult * 100));
+        }
+      });
+
+      chartInstance.update();
+    }
+
+    // --- TOAST SYSTEM ---
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      
+      let borderClr = 'border-cyan-500';
+      let icon = 'fa-circle-info text-cyan-400';
+
+      if (type === 'success') {
+        borderClr = 'border-emerald-500';
+        icon = 'fa-circle-check text-emerald-400';
+      } else if (type === 'error') {
+        borderClr = 'border-red-500';
+        icon = 'fa-triangle-exclamation text-red-400';
+      }
+
+      toast.className = `bg-slate-900 border ${borderClr} text-slate-100 px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-xs font-mono transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto max-w-sm`;
+      toast.innerHTML = `
+        <i class="fa-solid ${icon} text-base"></i>
+        <span>${message}</span>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 10);
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+  </script>
+
+  <!-- Marquee Keyframe Style -->
+  <style>
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    .animate-marquee {
+      display: inline-block;
+      animation: marquee 22s linear infinite;
+    }
+  </style>
+</body>
+</html>
